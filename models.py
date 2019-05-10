@@ -10,31 +10,31 @@ class Model:
         self.epochs = epochs
         self.batch_size = batch_size
 
-    def predict(self, x):
+    def predict(self, x, train_flg=False):
         for i, layer in enumerate(self.layers):
-            x = layer.forward(x)
+            x = layer.forward(x, train_flg)
         return x
 
-    def classify(self, x):
-        y = self.predict(x)
+    def classify(self, x, train_flg=False):
+        y = self.predict(x, train_flg)
         y = np.argmax(y ,axis=1)
 
         return y
 
-    def loss(self, x, t):
-        y = self.predict(x)
+    def loss(self, x, t, train_flg=False):
+        y = self.predict(x, train_flg)
         y = cross_entropy(y, t)
         return y
 
     def accuracy(self, x, t):
-        y = self.classify(x)
+        y = self.classify(x, train_flg=False)
         if t.ndim != 1:
             t = np.argmax(t, axis=1)
         acc = np.sum(y == t) / float(x.shape[0])
         return acc
 
     def loss_acc(self, x, t):
-        y = self.predict(x)
+        y = self.predict(x, train_flg=False)
         loss = cross_entropy(y, t)
 
         y = np.argmax(y ,axis=1)
@@ -44,8 +44,8 @@ class Model:
         acc = np.sum(y == t) / float(x.shape[0])
         return loss, acc
 
-    def __fit(self, x, t):
-        loss = self.loss(x, t)
+    def _fit(self, x, t):
+        loss = self.loss(x, t, train_flg=True)
         layers_r = self.layers.copy()
         layers_r.reverse()
         for i, layer in enumerate(layers_r):
@@ -65,7 +65,7 @@ class Model:
             x_batch = x_train[batch_mask]
             y_batch = y_train[batch_mask]
 
-            loss += self.__fit(x_batch, y_batch)
+            loss += self._fit(x_batch, y_batch)
 
             sys.stdout.write("\repoch %d | %d / %d | train_loss %f" %(epoch, piter, iter_per_epoch, loss/(piter+1)))
             sys.stdout.flush()
@@ -128,9 +128,18 @@ class Hid_Model(Model):
 class Conv_Model(Model):
     def __init__(self, epochs=20, batch_size=32):
         super().__init__(epochs, batch_size)
-        self.layers.append(Conv(kernels=16, input_shape=(1,28,28), conv_shape=(5,5), conv_pad=0, pool_shape=(2,2), optimizer='Adam', eps=0.001))
-        self.layers.append(Dense(input_shape=(16*12*12, ), output_shape=(128, ), activation='Relu', optimizer='Adam', eps=0.001))
-        self.layers.append(Dense(input_shape=(128, ), output_shape=(10, ), activation='Softmax', optimizer='Adam', eps=0.001))
+        self.layers.append(Conv(kernels=16, input_shape=(1,28,28), conv_shape=(5,5), conv_pad=0, pool_shape=(2,2), activation='Tanh', optimizer='Adam', eps=0.001))
+        self.layers.append(Dense(input_shape=(16*12*12, ), output_shape=(64, ), activation='Tanh', optimizer='Adam', eps=0.001))
+        self.layers.append(Dense(input_shape=(64, ), output_shape=(10, ), activation='Softmax', optimizer='Adam', eps=0.001))
+
+
+class Conv_Model_DOBN(Model):
+    def __init__(self, epochs=20, batch_size=32):
+        super().__init__(epochs, batch_size)
+        self.layers.append(Conv(kernels=16, input_shape=(1,28,28), conv_shape=(5,5), conv_pad=0, pool_shape=(2,2), activation='Relu', dropout=True, batchnorm=True, optimizer='Adam', eps=0.001))
+        self.layers.append(Dense(input_shape=(16*12*12, ), output_shape=(64, ), activation='Relu', dropout=True, batchnorm=True, optimizer='Adam', eps=0.001))
+        self.layers.append(Dense(input_shape=(64, ), output_shape=(10, ), activation='Softmax', optimizer='Adam', dropout=True, batchnorm=True, eps=0.001))
+
 
 
 class Conv_Model2(Model):
