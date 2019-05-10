@@ -134,11 +134,11 @@ class Conv_Model(Model):
 
 
 class Conv_Model_DOBN(Model):
-    def __init__(self, epochs=20, batch_size=32):
+    def __init__(self, epochs=20, batch_size=32, kernels=32, hid_size=128, batchnorm=True, dropout=True):
         super().__init__(epochs, batch_size)
-        self.layers.append(Conv(kernels=16, input_shape=(1,28,28), conv_shape=(5,5), conv_pad=0, pool_shape=(2,2), activation='Relu', dropout=True, batchnorm=True, optimizer='Adam', eps=0.001))
-        self.layers.append(Dense(input_shape=(16*12*12, ), output_shape=(64, ), activation='Relu', dropout=True, batchnorm=True, optimizer='Adam', eps=0.001))
-        self.layers.append(Dense(input_shape=(64, ), output_shape=(10, ), activation='Softmax', optimizer='Adam', dropout=True, batchnorm=True, eps=0.001))
+        self.layers.append(Conv(kernels=kernels, input_shape=(1,28,28), conv_shape=(5,5), conv_pad=0, pool_shape=(2,2), activation='Relu', dropout=dropout, batchnorm=batchnorm, optimizer='Adam', eps=0.001))
+        self.layers.append(Dense(input_shape=(kernels*12*12, ), output_shape=(hid_size, ), activation='Relu', dropout=dropout, batchnorm=batchnorm, optimizer='Adam', eps=0.001))
+        self.layers.append(Dense(input_shape=(hid_size, ), output_shape=(10, ), activation='Softmax', optimizer='Adam', batchnorm=batchnorm, eps=0.001))
 
 
 
