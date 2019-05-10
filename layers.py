@@ -4,10 +4,10 @@ from optimizers import *
 from functions import *
 
 
-
 class Dense:
     def __init__(self, input_shape=(784, ), output_shape=(10, ), activation='Relu',
-                batchnorm=False, dropout=False, dropout_ratio=0.5, optimizer='SGD', eps=0.01):
+                batchnorm=False, dropout=False, dropout_ratio=0.5, weight_decay=0.0,
+                optimizer='SGD', eps=0.01):
         self.W = np.sqrt(2.0 / input_shape[0]) * np.random.randn( input_shape[0], output_shape[0] )
         self.b = np.zeros(output_shape[0])
         self.x_shape = None
@@ -15,6 +15,7 @@ class Dense:
         self.u = None
         self.activation = act[activation]()
         self.optimizer = opt[optimizer](eps=eps)
+        self.weight_decay = weight_decay
         if batchnorm:
             self.batchnorm = BatchNormalization()
         else:
@@ -46,7 +47,7 @@ class Dense:
             delta = self.dropout.backward(delta)
         dx = self.activation.backward(delta)
 
-        self.dW = np.dot(self.x.T, dx)
+        self.dW = np.dot(self.x.T, dx) + self.weight_decay * self.W
         self.db = np.sum(dx, axis=0)
 
         dx = np.dot(dx, self.W.T)
@@ -63,7 +64,7 @@ class Dense:
 class Conv:
     def __init__(self, kernels=8, input_shape=(1,28,28), conv_shape=(5,5), conv_pad=0, conv_stride=1,
                 pool_shape=(2,2), pool_pad=0, pool_stride=2,
-                batchnorm=False, dropout=False, dropout_ratio=0.25,
+                batchnorm=False, dropout=False, dropout_ratio=0.25, weight_decay=0.0,
                 activation='Relu', optimizer='SGD', eps=0.01):
         self.W = np.sqrt(2.0/ (conv_shape[0] * conv_shape[1])) * np.random.randn( kernels, input_shape[0], conv_shape[0], conv_shape[1] )
         self.b = np.zeros(kernels)
@@ -82,6 +83,7 @@ class Conv:
         self.conv_y_col = None
         self.activation = act[activation]()
         self.optimizer = opt[optimizer](eps=eps)
+        self.weight_decay = weight_decay
         if batchnorm:
             self.batchnorm = BatchNormalization()
         else:
@@ -156,7 +158,7 @@ class Conv:
 
         self.db = np.sum(dx, axis=0)
         self.dW = np.dot(self.x_col.T, dx)
-        self.dW = self.dW.transpose(1, 0).reshape(FN, C, FH, FW)
+        self.dW = self.dW.transpose(1, 0).reshape(FN, C, FH, FW) + self.weight_decay * self.W
 
         dx = np.dot(dx, self.W_col.T)
         dx = col2im(dx, self.x.shape, FH, FW, self.conv_stride, self.conv_pad)
@@ -282,7 +284,7 @@ class BatchNormalization:
 
 class Residual_Block:
     def __init__(self, x_shape, filters=32, filter_size=(3,3),
-                batchnorm=False, dropout=False, dropout_ratio=0.25,
+                batchnorm=False, dropout=False, dropout_ratio=0.25, weight_decay=0.0,
                 optimizer='Adam', eps=0.001): #x_shape = (C,H,W)
         self.filters = filters
 
@@ -290,12 +292,12 @@ class Residual_Block:
         pad = int((filter_size[0] - 1)/2)
 
         self.conv1 = Conv(input_shape=x_shape, conv_pad=pad, pool_shape=(0,0),
-                            optimizer=optimizer, batchnorm=batchnorm, dropout=dropout, dropout_ratio=dropout_ratio,
+                            optimizer=optimizer, batchnorm=batchnorm, weight_decay=weight_decay, dropout=dropout, dropout_ratio=dropout_ratio,
                             eps=eps)
         x_shape2 = (channels, ) + x_shape[1:]
 
         self.conv2 = Conv(input_shape=x_shape, conv_pad=pad, pool_shape=(0,0),
-                            optimizer=optimizer, batchnorm=batchnorm, dropout=dropout, dropout_ratio=dropout_ratio,
+                            optimizer=optimizer, batchnorm=batchnorm, weight_decay=weight_decay, dropout=dropout, dropout_ratio=dropout_ratio,
                             eps=eps)
 
     def forward(self, x, train_flg=False):
