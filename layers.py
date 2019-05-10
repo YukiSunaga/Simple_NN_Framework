@@ -281,22 +281,26 @@ class BatchNormalization:
         return dx
 
 class Residual_Block:
-    def __init__(self, x_shape, filters=32, filter_size=(3,3), batchnorm=True, optimizer='Adam', eps=0.001): #x_shape = (C,H,W)
+    def __init__(self, x_shape, filters=32, filter_size=(3,3),
+                batchnorm=False, dropout=False, dropout_ratio=0.25,
+                optimizer='Adam', eps=0.001): #x_shape = (C,H,W)
         self.filters = filters
 
         channels = filters
         pad = int((filter_size[0] - 1)/2)
 
-        self.conv1 = Conv(input_shape=x_shape, conv_pad=pad,
-                            pool_shape=(0,0), optimizer=optimizer, batchnorm=batchnorm, eps=eps)
+        self.conv1 = Conv(input_shape=x_shape, conv_pad=pad, pool_shape=(0,0),
+                            optimizer=optimizer, batchnorm=batchnorm, dropout=dropout, dropout_ratio=dropout_ratio,
+                            eps=eps)
         x_shape2 = (channels, ) + x_shape[1:]
 
-        self.conv2 = Conv(input_shape=x_shape2, conv_pad=pad,
-                            pool_shape=(0,0), optimizer=optimizer, batchnorm=batchnorm, eps=eps)
+        self.conv2 = Conv(input_shape=x_shape, conv_pad=pad, pool_shape=(0,0),
+                            optimizer=optimizer, batchnorm=batchnorm, dropout=dropout, dropout_ratio=dropout_ratio,
+                            eps=eps)
 
     def forward(self, x, train_flg=False):
-        y = self.conv1.forward(x)
-        y = self.conv2.forward(y)
+        y = self.conv1.forward(x, train_flg)
+        y = self.conv2.forward(y, train_flg)
 
         if x.shape[1] < self.filters:
             shortcut = np.zeros((x.shape[0], self.filters, x.shape[2], x.shape[3]))
@@ -309,5 +313,5 @@ class Residual_Block:
     def backward(self, delta):
         dx = self.conv2.backward(delta)
         dx = self.conv1.backward(dx)
-        dx = dout + dx
+        dx = delta + dx
         return dx
