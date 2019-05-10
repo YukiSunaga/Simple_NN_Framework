@@ -53,7 +53,7 @@ class Dense:
         dx = dx.reshape(*self.x_shape)
 
         if not self.batchnorm is None:
-            dx = self.batchnorm.forward(dx)
+            dx = self.batchnorm.backward(dx)
 
         self.optimizer.update([self.W, self.b], [self.dW, self.db])
 
