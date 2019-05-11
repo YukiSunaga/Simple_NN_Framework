@@ -27,6 +27,19 @@ class Relu:
         dx = delta
         return dx
 
+class Tanh:
+    def __init__(self):
+        self.y = None
+
+    def forward(self, x):
+        y = np.tanh(x)
+        self.y = y
+        return y
+
+    def backward(self, delta):
+        dx = delta * (1 - self.y ** 2)
+        return dx
+
 class Softmax:
     def __init__(self):
         self.y = None
@@ -42,4 +55,4 @@ class Softmax:
         return delta
 
 
-act = {'Id':Id, 'Relu':Relu, 'Softmax':Softmax}
+act = {'Id':Id, 'Relu':Relu, 'Softmax':Softmax, 'Tanh':Tanh}

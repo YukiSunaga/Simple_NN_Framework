@@ -8,6 +8,43 @@ class SGD:
         for p, g in zip(params, grads):
             p -= self.eps * g
 
+class Momentum:
+    def __init__(self, eps=0.01, momentum=0.9):
+        self.eps = eps
+        self.momentum = momentum
+        self.v = None
+
+    def update(self, params, grads):
+        if self.v is None:
+            self.v = []
+            for param in params:
+                self.v.append(np.zeros_like(param))
+
+        for p, g, v in zip(params, grads, self.v):
+            v = self.momentum * v - self.eps * g
+            p += v
+
+
+class Nesterov:
+    def __init__(self, eps=0.01, momentum=0.9):
+        self.eps = eps
+        self.momentum = momentum
+        self.v = None
+
+    def update(self, params, grads):
+        if self.v is None:
+            self.v = []
+            for param in params:
+                self.v.append(np.zeros_like(param))
+
+        for p, g, v in zip(params, grads, self.v):
+            v *= self.momentum
+            v -= self.eps * g
+            p += self.momentum * self.momentum * v
+            p -= (1 + self.momentum) * self.eps * g
+
+
+
 class Adam:
     def __init__(self, eps=0.001, beta1=0.9, beta2=0.999):
         self.eps = eps
@@ -35,4 +72,4 @@ class Adam:
             p -= eps_t * self.m[i] / (np.sqrt(self.v[i]) + 1e-7)
             i += 1
 
-opt = {'SGD':SGD, 'Adam':Adam}
+opt = {'SGD':SGD, 'Adam':Adam, 'Momentum':Momentum, 'Nesterov':Nesterov}
