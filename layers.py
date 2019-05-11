@@ -4,6 +4,7 @@ from optimizers import *
 from functions import *
 
 
+
 class Dense:
     def __init__(self, input_shape=(784, ), output_shape=(10, ), activation='Relu',
                 batchnorm=False, dropout=False, dropout_ratio=0.5, weight_decay=0.0,
@@ -283,22 +284,22 @@ class BatchNormalization:
         return dx
 
 class Residual_Block:
-    def __init__(self, x_shape, filters=32, filter_size=(3,3),
+    def __init__(self, input_shape, kernels=32, conv_shape=(3,3),
                 batchnorm=False, dropout=False, dropout_ratio=0.25, weight_decay=0.0,
-                optimizer='Adam', eps=0.001): #x_shape = (C,H,W)
-        self.filters = filters
+                activation='Relu', optimizer='Adam', eps=0.001): #x_shape = (C,H,W)
+        self.filters = kernels
 
-        channels = filters
-        pad = int((filter_size[0] - 1)/2)
+        channels = kernels
+        pad = int((conv_shape[0] - 1)/2)
 
-        self.conv1 = Conv(input_shape=x_shape, conv_pad=pad, pool_shape=(0,0),
+        self.conv1 = Conv(input_shape=input_shape, kernels=kernels, conv_shape=conv_shape, conv_pad=pad, pool_shape=(0,0),
                             optimizer=optimizer, batchnorm=batchnorm, weight_decay=weight_decay, dropout=dropout, dropout_ratio=dropout_ratio,
-                            eps=eps)
-        x_shape2 = (channels, ) + x_shape[1:]
+                            activation=activation, eps=eps)
+        x_shape2 = (channels, ) + input_shape[1:]
 
-        self.conv2 = Conv(input_shape=x_shape, conv_pad=pad, pool_shape=(0,0),
+        self.conv2 = Conv(input_shape=x_shape2, kernels=kernels, conv_shape=conv_shape, conv_pad=pad, pool_shape=(0,0),
                             optimizer=optimizer, batchnorm=batchnorm, weight_decay=weight_decay, dropout=dropout, dropout_ratio=dropout_ratio,
-                            eps=eps)
+                            activation=activation, eps=eps)
 
     def forward(self, x, train_flg=False):
         y = self.conv1.forward(x, train_flg)
