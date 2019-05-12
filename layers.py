@@ -65,7 +65,7 @@ class Dense:
 class Conv:
     def __init__(self, kernels=8, input_shape=(1,28,28), conv_shape=(5,5), conv_pad=0, conv_stride=1,
                 pool_shape=(2,2), pool_pad=0, pool_stride=2,
-                batchnorm=False, dropout=False, dropout_ratio=0.25, weight_decay=0.0,
+                batchnorm=False, pos_of_bn=0, dropout=False, dropout_ratio=0.25, weight_decay=0.0,
                 activation='Relu', optimizer='SGD', eps=0.01):
         self.W = np.sqrt(2.0/ (conv_shape[0] * conv_shape[1])) * np.random.randn( kernels, input_shape[0], conv_shape[0], conv_shape[1] )
         self.b = np.zeros(kernels)
@@ -89,13 +89,14 @@ class Conv:
             self.batchnorm = BatchNormalization()
         else:
             self.batchnorm = None
+        self.posofbn = pos_of_bn
         if dropout:
             self.dropout = Dropout(dropout_ratio=dropout_ratio)
         else:
             self.dropout = None
 
     def forward(self, x, train_flg=False):
-        if not self.batchnorm is None:
+        if self.batchnorm is not None and self.posofbn == 0:
             x = self.batchnorm.forward(x, train_flg)
 
         FN, C, FH, FW = self.W.shape
@@ -107,15 +108,23 @@ class Conv:
         col_W = self.W.reshape(FN, -1).T
 
         self.u_col = np.dot(col, col_W) + self.b
-        self.u = self.u_col.reshape(N, out_h, out_w, -1).transpose(0, 3, 1, 2)
+        u = self.u_col.reshape(N, out_h, out_w, -1).transpose(0, 3, 1, 2)
+        self.u = u
 
         self.x = x
         self.x_col = col
         self.W_col = col_W
 
 
-        self.conv_y = self.activation.forward(self.u)
+        if self.batchnorm is not None and self.posofbn == 1:
+            u = self.batchnorm.forward(u, train_flg)
+
+
+        self.conv_y = self.activation.forward(u)
         y = self.conv_y
+
+        if self.batchnorm is not None and self.posofbn == 2:
+            y = self.batchnorm.forward(y, train_flg)
 
         if self.pool_shape[0] != 0 and self.pool_shape[1] != 0:
             N, C, H, W = self.conv_y.shape
@@ -151,10 +160,15 @@ class Conv:
             dcol = dmax.reshape(dmax.shape[0] * dmax.shape[1] * dmax.shape[2], -1)
             delta = col2im(dcol, self.conv_y.shape, self.pool_shape[0], self.pool_shape[1], self.pool_stride, self.pool_pad)
 
+        if self.batchnorm is not None and self.posofbn == 2:
+            delta = self.batchnorm.backward(delta)
 
         FN, C, FH, FW = self.W.shape
 
         dx = self.activation.backward(delta)
+        if self.batchnorm is not None and self.posofbn == 1:
+            dx = self.batchnorm.backward(dx)
+
         dx = dx.transpose(0,2,3,1).reshape(-1, FN)
 
         self.db = np.sum(dx, axis=0)
@@ -164,12 +178,13 @@ class Conv:
         dx = np.dot(dx, self.W_col.T)
         dx = col2im(dx, self.x.shape, FH, FW, self.conv_stride, self.conv_pad)
 
-        if not self.batchnorm is None:
+        if self.batchnorm is not None and self.posofbn == 0:
             dx = self.batchnorm.backward(dx)
 
         self.optimizer.update([self.W, self.b], [self.dW, self.db])
 
         return dx
+
 
 
 class Dropout:
@@ -284,7 +299,7 @@ class BatchNormalization:
 class Residual_Block:
     def __init__(self, input_shape, kernels=32, conv_shape=(3,3),
                 batchnorm=False, dropout=False, dropout_ratio=0.25, weight_decay=0.0,
-                activation='Relu', optimizer='Adam', eps=0.001): #x_shape = (C,H,W)
+                activation='Relu', optimizer='Adam', eps=0.001):
         self.filters = kernels
 
         channels = kernels
