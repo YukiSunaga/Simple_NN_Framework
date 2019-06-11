@@ -74,7 +74,7 @@ class Conv:
                 pool_shape=(2,2), pool_pad=0, pool_stride=2,
                 batchnorm=False, pos_of_bn=1, dropout=False, dropout_ratio=0.25, weight_decay=0.0,
                 activation='Relu', optimizer='SGD', eps=0.01):
-        self.W = np.sqrt(2.0/ (conv_shape[0] * conv_shape[1] * conv_shape[2])) * np.random.randn( kernels, input_shape[0], conv_shape[0], conv_shape[1] )
+        self.W = np.sqrt(2.0/ (conv_shape[0] * conv_shape[1]*input_shape[0])) * np.random.randn( kernels, input_shape[0], conv_shape[0], conv_shape[1] )
         self.b = np.zeros(kernels)
         self.W_col = None
         self.conv_pad = conv_pad
